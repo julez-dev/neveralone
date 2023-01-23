@@ -45,11 +45,12 @@ func (t *Template) ServeParty(writer io.Writer, id string) error {
 		return fmt.Errorf("could not find session")
 	}
 
-	_ = session
 	data := struct {
-		Player []*party.Player
+		Player  []*party.Player
+		VideoID string
 	}{
-		Player: session.GetPlayersCopy(),
+		Player:  session.GetPlayersCopy(),
+		VideoID: session.GetCurrentVideoID(),
 	}
 
 	return t.tmpl.ExecuteTemplate(writer, "party.html", data)

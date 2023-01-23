@@ -2,6 +2,7 @@ package party
 
 import (
 	"context"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
@@ -16,6 +17,9 @@ const (
 type Session struct {
 	logger zerolog.Logger
 	ID     uuid.UUID
+
+	videoID string
+	vLock   *sync.Mutex
 
 	pLock       *sync.Mutex
 	players     map[string]*Player
@@ -56,6 +60,7 @@ func NewSession(logger zerolog.Logger, host *User) *Session {
 		DetachWS:    make(chan string),
 		o:           &sync.Once{},
 		pLock:       &sync.Mutex{},
+		vLock:       &sync.Mutex{},
 	}
 
 	s.players[host.ID.String()] = NewPlayer(host, true)
@@ -80,6 +85,12 @@ func (s *Session) GetPlayersCopy() []*Player {
 	}
 
 	return copied
+}
+
+func (s *Session) GetCurrentVideoID() string {
+	s.vLock.Lock()
+	defer s.vLock.Unlock()
+	return s.videoID
 }
 
 func (s *Session) Run(ctx context.Context) {
@@ -157,6 +168,8 @@ func (s *Session) Run(ctx context.Context) {
 
 			ticker.Reset(usageCheckWait)
 		case event := <-s.broadcast:
+			s.hookBroadcast(event)
+
 			for _, conn := range s.connections {
 				if conn.userID != event.playerID {
 					s.logger.Debug().
@@ -176,7 +189,26 @@ func (s *Session) Run(ctx context.Context) {
 			return
 		}
 	}
+}
 
+func (s *Session) hookBroadcast(event *broadcastMessage) {
+	parsed, err := parseEvent(event.data)
+
+	if err != nil {
+		if !errors.Is(err, errUnhandledEvent) {
+			s.logger.Err(err).Send()
+			return
+		}
+
+		return
+	}
+
+	switch v := parsed.(type) {
+	case *loadVideoPayload:
+		s.vLock.Lock()
+		s.videoID = v.VideoID
+		s.vLock.Unlock()
+	}
 }
 
 func (s *Session) CloseChannels() {

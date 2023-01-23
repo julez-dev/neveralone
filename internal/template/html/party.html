@@ -19,6 +19,14 @@
         .video-input {
             padding-bottom: 2rem;
         }
+
+        .ws-log {
+            text-align: center;
+        }
+
+        .ws-log p {
+            padding: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -43,7 +51,8 @@
 </span>
 
 
-<p id="ws-log"></p>
+<span class="ws-log">
+</span>
 
 <script type="text/javascript" src="https://www.youtube.com/iframe_api"></script>
 
@@ -63,9 +72,14 @@
     ws.onopen = function () {
     }
 
+    const wsLog = document.querySelector(".ws-log")
     let justGotUpdate = false;
 
     ws.onmessage = function (evt) {
+        const item = document.createElement('p')
+        item.innerText = evt.data
+        wsLog.appendChild(item)
+
         const data = JSON.parse(evt.data)
 
         if(!playerReady) {
@@ -75,7 +89,7 @@
         justGotUpdate = true
         setTimeout(function () {
             justGotUpdate = false
-        }, 500)
+        }, 400)
 
         switch (data.action) {
             case "play":
@@ -116,6 +130,7 @@
         player = new YT.Player('player', {
             height: '1080',
             width: '1920',
+            videoId: '{{ .VideoID }}',
             events: {
                 'onReady': onPlayerReady,
                 'onStateChange': onPlayerStateChange

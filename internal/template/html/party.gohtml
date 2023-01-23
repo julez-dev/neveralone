@@ -35,7 +35,7 @@
     <p>Users in Watch-Party</p>
     <ul>
         {{range $player := .Player}}
-            <li>{{$player.User.ID}} - {{$player.User.Name}} - {{$player.IsHost}}</li>
+            <li>{{$player.User.Name}} - {{$player.IsHost}}</li>
         {{end}}
     </ul>
 </span>
@@ -69,8 +69,7 @@
 
     ws = new WebSocket(uri)
 
-    ws.onopen = function () {
-    }
+    ws.onopen = function () {}
 
     const wsLog = document.querySelector(".ws-log")
     let justGotUpdate = false;
@@ -101,7 +100,32 @@
                 player.pauseVideo()
                 break
             case "load-video":
-                player.loadVideoById(data.payload.id)
+                player.loadVideoById(
+                    {
+                        'videoId': data.payload.id,
+                        'startSeconds': 0,
+                    },
+                );
+
+                player.playVideo()
+                break
+            case "request-state":
+                const videoID = player.getVideoData().video_id
+                const time = player.getCurrentTime()
+                const state = player.getPlayerState()
+                const rate = player.getPlaybackRate()
+
+                let sendData = {
+                    action: "sync-response",
+                    payload: {
+                        id: videoID,
+                        timestamp: time,
+                        state: state,
+                        rate: rate,
+                    }
+                }
+
+                ws.send(JSON.stringify(sendData))
         }
     }
 
@@ -120,19 +144,21 @@
             }
         }
 
-        player.loadVideoById(videoID)
-
         ws.send(JSON.stringify(data))
     })
 
     // function is called by youtubes script once its ready to be used
     function onYouTubeIframeAPIReady() {
+        console.log('youtube triggered')
         player = new YT.Player('player', {
             height: '1080',
             width: '1920',
-            videoId: '{{ .VideoID }}',
+            playerVars: { 'autoplay': 0, controls: 2 },
             events: {
                 'onReady': onPlayerReady,
+                'onPlaybackQualityChange': function (event) {
+                    console.log("looool")
+                },
                 'onStateChange': onPlayerStateChange
             }
         });
@@ -140,7 +166,23 @@
 
     function onPlayerReady(event) {
         playerReady = true
-        player.playVideo()
+
+        {{ if .State.VideoID}}
+            player.loadVideoById(
+                {
+                    'videoId': '{{  .State.VideoID }}',
+                    'startSeconds': {{ .State.Timestamp }},
+                },
+            )
+        {{end}}
+
+        {{ if eq .State.PlayerState 1 }}
+            event.target.playVideo();
+        {{end}}
+
+        {{ if eq .State.PlayerState 2 }}
+            event.target.pauseVideo()
+        {{end}}
     }
 
     function onPlayerStateChange(event) {
@@ -151,7 +193,6 @@
         let data;
         switch (event.data) {
             case YT.PlayerState.PLAYING:
-                console.log(event)
                  data = {
                     action: "play",
                     payload: {

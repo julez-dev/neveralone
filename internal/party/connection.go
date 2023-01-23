@@ -1,6 +1,7 @@
 package party
 
 import (
+	"errors"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
 	"sync"
@@ -60,7 +61,7 @@ func (c *connection) readWS() {
 	})
 
 	for {
-		_, message, err := c.socket.ReadMessage()
+		_, data, err := c.socket.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				c.logger.Err(err).Msg("got unexpected error while reading websocket")
@@ -69,11 +70,20 @@ func (c *connection) readWS() {
 			return
 		}
 
-		//c.logger.Debug().Str("content", string(message)).Msg("read message on ws")
+		parsed, err := parseEvent(data)
 
-		c.session.broadcast <- &broadcastMessage{
+		if err != nil {
+			if !errors.Is(err, errUnhandledEvent) {
+				c.logger.Err(err).Send()
+			}
+
+			continue
+		}
+
+		c.session.messageQueue <- &message{
 			playerID: c.userID,
-			data:     message,
+			event:    parsed,
+			raw:      data,
 		}
 	}
 }

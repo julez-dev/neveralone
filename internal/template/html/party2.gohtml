@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Room</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.21.1/video-js.min.css" integrity="sha512-kCCb9I/QM9hw+hm+JlN2ounNo2bRFZ4r9guSBv0BYk7RezWV2H8eI1unYnpJrU8+2g773WW1qNG+fSQ0X7M3Tg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.21.1/video.min.js" integrity="sha512-MVBrInWdHaDQQNrDEmZ0qZnuclTBAwIJn8Id9eEzZibAHaWjeAF8TEM3RcJ09eGjWgPq8Ud+42wegsir8usLeg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-youtube/2.6.1/Youtube.min.js" integrity="sha512-mF+XuiEvJq707N/B9Fm/fI2wgMcWuFLsoztIp0UzEKgHCZgczbYpO2+Vq2TEi0LmE4crVj2r8AYru7X5QjVotw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .player-wrapper {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .video-input {
+            padding-bottom: 2rem;
+        }
+
+        .ws-log {
+            text-align: center;
+        }
+
+        .ws-log p {
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<span>
+    <p>Users in Watch-Party</p>
+    <ul>
+        {{range $player := .Player}}
+            <li>{{$player.User.Name}} - {{$player.IsHost}}</li>
+        {{end}}
+    </ul>
+</span>
+
+<span class="player-wrapper">
+    <div class="video-input">
+        <label for="video-id">YouTube ID</label>
+        <input id="video-id" type="text">
+
+        <button id="load-video">Load new video</button>
+    </div>
+      <video
+              id="vid"
+              class="video-js"
+              controls
+              width="1920" height="1080"
+              data-setup='{}'
+      >
+      </video>
+</span>
+
+
+<span class="ws-log">
+</span>
+
+<script>
+    let playerReady = false
+
+    const player = videojs('vid')
+
+    player.ready(function () {
+        playerReady = true;
+
+        {{ if .State.VideoID}}
+            player.src({src: '{{  .State.VideoID }}', type: 'video/youtube'});
+            player.currentTime({{ .State.Timestamp }})
+
+        {{end}}
+
+        {{ if eq .State.PlayerState 1 }}
+            player.play()
+        {{end}}
+
+        {{ if eq .State.PlayerState 2 }}
+            player.pause()
+        {{end}}
+    })
+
+
+    const loc = window.location;
+    let uri = 'ws:';
+
+    if (loc.protocol === 'https:') {
+        uri = 'wss:';
+    }
+    uri += '//' + loc.host;
+    uri += loc.pathname + '/ws';
+
+    ws = new WebSocket(uri)
+    ws.onopen = function () {}
+
+    let justGotUpdate = false;
+    ws.onmessage = function (evt) {
+        const data = JSON.parse(evt.data)
+
+        if(!playerReady) {
+            return
+        }
+
+        justGotUpdate = true
+        setTimeout(function () {
+            justGotUpdate = false
+        }, 500)
+
+        switch (data.action) {
+            case "play":
+                player.currentTime(data.payload.timestamp)
+                player.play()
+                break
+            case "pause":
+                player.currentTime(data.payload.timestamp)
+                player.pause()
+                break
+            case "load-video":
+                player.poster('');
+                player.src({src: data.payload.id, type: 'video/youtube'});
+                player.currentTime(0)
+                player.play()
+                break
+            case "request-state":
+                let videoID = ""
+
+                if (player.getMedia().src[0] !== undefined) {
+                    videoID = player.getMedia().src[0].src
+                }
+
+                const time = player.currentTime()
+                const paused = player.paused()
+
+                let state = 2;
+                if (!paused) state = 1;
+
+                let sendData = {
+                    action: "sync-response",
+                    payload: {
+                        id: videoID,
+                        timestamp: time,
+                        state: state,
+                    }
+                }
+
+                ws.send(JSON.stringify(sendData))
+        }
+    }
+
+    player.on('pause', function (event) {
+        if (justGotUpdate) { return }
+        data = {
+            action: "pause",
+            payload: {
+                timestamp: player.currentTime()
+            }
+        }
+
+        ws.send(JSON.stringify(data))
+    })
+
+    player.on('play', function () {
+        if (justGotUpdate) { return }
+        data = {
+            action: "play",
+            payload: {
+                timestamp: player.currentTime()
+            }
+        }
+
+        ws.send(JSON.stringify(data))
+    })
+
+    document.querySelector('#load-video').addEventListener('click', function() {
+        if(!playerReady) { return }
+
+        const videoID = document.querySelector('#video-id').value;
+
+        const data = {
+            action: "load-video",
+            payload: {
+                id: videoID
+            }
+        }
+
+        ws.send(JSON.stringify(data))
+    })
+</script>
+
+</body>
+</html>

@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/davecgh/go-spew v1.1.1
+	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/google/uuid v1.3.0
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
 	github.com/gorilla/websocket v1.5.0

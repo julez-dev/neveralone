@@ -2,32 +2,34 @@ package party
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
+	"log"
 	"sync"
 	"time"
 )
 
 const (
-	usageCheckWait = time.Second * 45
+	usageCheckWait   = time.Second * 45
+	requestStateWait = time.Second * 2
 )
 
 type Session struct {
 	logger zerolog.Logger
 	ID     uuid.UUID
 
-	videoID string
-	vLock   *sync.Mutex
+	state *VideoStateSnapshot
+	vLock *sync.Mutex
 
 	pLock       *sync.Mutex
 	players     map[string]*Player
 	connections map[string]*connection
 
-	broadcast  chan *broadcastMessage
-	Register   chan *User
-	Unregister chan *User
+	messageQueue chan *message
+	Register     chan *User
+	Unregister   chan *User
 
 	AttachWS chan *AttachSocket
 	DetachWS chan string
@@ -40,27 +42,31 @@ type AttachSocket struct {
 	Connection *websocket.Conn
 }
 
-type broadcastMessage struct {
+type message struct {
 	playerID string
-	data     []byte
+	event    any
+	raw      []byte
 }
 
 func NewSession(logger zerolog.Logger, host *User) *Session {
 	id := uuid.New()
 
 	s := &Session{
-		logger:      logger.With().Str("room-id", id.String()).Logger(),
-		ID:          id,
-		players:     map[string]*Player{},
-		connections: map[string]*connection{},
-		broadcast:   make(chan *broadcastMessage),
-		Register:    make(chan *User),
-		Unregister:  make(chan *User),
-		AttachWS:    make(chan *AttachSocket),
-		DetachWS:    make(chan string),
-		o:           &sync.Once{},
-		pLock:       &sync.Mutex{},
-		vLock:       &sync.Mutex{},
+		logger:       logger.With().Str("room-id", id.String()).Logger(),
+		ID:           id,
+		players:      map[string]*Player{},
+		connections:  map[string]*connection{},
+		messageQueue: make(chan *message),
+		Register:     make(chan *User),
+		Unregister:   make(chan *User),
+		AttachWS:     make(chan *AttachSocket),
+		DetachWS:     make(chan string),
+		state: &VideoStateSnapshot{
+			PlayerState: NoVideo,
+		},
+		o:     &sync.Once{},
+		pLock: &sync.Mutex{},
+		vLock: &sync.Mutex{},
 	}
 
 	s.players[host.ID.String()] = NewPlayer(host, true)
@@ -87,22 +93,48 @@ func (s *Session) GetPlayersCopy() []*Player {
 	return copied
 }
 
-func (s *Session) GetCurrentVideoID() string {
+func (s *Session) GetCurrentState() *VideoStateSnapshot {
 	s.vLock.Lock()
 	defer s.vLock.Unlock()
-	return s.videoID
+	return &VideoStateSnapshot{
+		PlayerState: s.state.PlayerState,
+		VideoID:     s.state.VideoID,
+		Timestamp:   s.state.Timestamp,
+	}
 }
 
 func (s *Session) Run(ctx context.Context) {
 	ticker := time.NewTicker(usageCheckWait)
+	stateTicker := time.NewTicker(requestStateWait)
 
 	defer func() {
 		ticker.Stop()
+		stateTicker.Stop()
 		s.logger.Debug().Msg("session loop exited")
 	}()
 
 	for {
 		select {
+		case <-stateTicker.C:
+			if len(s.connections) < 1 {
+				break
+			}
+
+			// get first open connection
+			var conn *connection
+			for _, c := range s.connections {
+				conn = c
+				break
+			}
+
+			msg := &actionMessage{Action: actionRequestState}
+			data, err := json.Marshal(msg)
+
+			if err != nil {
+				break
+			}
+
+			conn.send <- data
 		case <-ticker.C:
 			// Close room when no more connections
 			if len(s.connections) < 1 {
@@ -160,6 +192,7 @@ func (s *Session) Run(ctx context.Context) {
 			}(newConn)
 
 			ticker.Reset(usageCheckWait)
+			stateTicker.Reset(requestStateWait)
 		case id := <-s.DetachWS:
 			if conn, ok := s.connections[id]; ok {
 				delete(s.connections, id)
@@ -167,18 +200,32 @@ func (s *Session) Run(ctx context.Context) {
 			}
 
 			ticker.Reset(usageCheckWait)
-		case event := <-s.broadcast:
-			s.hookBroadcast(event)
+		case message := <-s.messageQueue:
+			// handle messages coming from the socket
+			s.vLock.Lock()
+			s.state.updateFromEvent(message.event)
+			s.vLock.Unlock()
+
+			var allowSelfSend bool
+
+			if _, ok := message.event.(*syncResponsePayload); ok {
+				break
+			}
+
+			if _, ok := message.event.(*loadVideoPayload); ok {
+				allowSelfSend = true
+				log.Println("self send allowed")
+			}
 
 			for _, conn := range s.connections {
-				if conn.userID != event.playerID {
+				if conn.userID != message.playerID || allowSelfSend {
 					s.logger.Debug().
-						Str("sender-user-id", event.playerID).
+						Str("sender-user-id", message.playerID).
 						Str("receiver-user-id", conn.userID).
-						Str("content", string(event.data)).
+						Str("content", string(message.raw)).
 						Msg("sending data to user")
 
-					conn.send <- event.data
+					conn.send <- message.raw
 				}
 			}
 		case <-ctx.Done():
@@ -191,29 +238,9 @@ func (s *Session) Run(ctx context.Context) {
 	}
 }
 
-func (s *Session) hookBroadcast(event *broadcastMessage) {
-	parsed, err := parseEvent(event.data)
-
-	if err != nil {
-		if !errors.Is(err, errUnhandledEvent) {
-			s.logger.Err(err).Send()
-			return
-		}
-
-		return
-	}
-
-	switch v := parsed.(type) {
-	case *loadVideoPayload:
-		s.vLock.Lock()
-		s.videoID = v.VideoID
-		s.vLock.Unlock()
-	}
-}
-
 func (s *Session) CloseChannels() {
 	s.o.Do(func() {
-		close(s.broadcast)
+		close(s.messageQueue)
 		close(s.Register)
 		close(s.Unregister)
 		close(s.AttachWS)

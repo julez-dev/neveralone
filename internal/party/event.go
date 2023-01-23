@@ -5,8 +5,13 @@ import (
 	"fmt"
 )
 
+// Events coming from the sockets
+
 const (
-	eventLoadVideo = "load-video"
+	eventLoadVideo    = "load-video"
+	eventPauseVideo   = "pause"
+	eventPlayVideo    = "play"
+	eventSyncResponse = "sync-response"
 )
 
 var (
@@ -15,6 +20,20 @@ var (
 
 type loadVideoPayload struct {
 	VideoID string `json:"id"`
+}
+
+type pauseVideoPayload struct {
+	Timestamp float64 `json:"timestamp"`
+}
+
+type playVideoPayload struct {
+	Timestamp float64 `json:"timestamp"`
+}
+
+type syncResponsePayload struct {
+	Timestamp float64     `json:"timestamp"`
+	VideoID   string      `json:"id"`
+	State     playerState `json:"state"`
 }
 
 func parseEvent(b []byte) (any, error) {
@@ -30,6 +49,33 @@ func parseEvent(b []byte) (any, error) {
 	switch base.Name {
 	case eventLoadVideo:
 		event := &loadVideoPayload{}
+		err := json.Unmarshal(base.Payload, event)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return event, nil
+	case eventPlayVideo:
+		event := &playVideoPayload{}
+		err := json.Unmarshal(base.Payload, event)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return event, nil
+	case eventPauseVideo:
+		event := &pauseVideoPayload{}
+		err := json.Unmarshal(base.Payload, event)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return event, nil
+	case eventSyncResponse:
+		event := &syncResponsePayload{}
 		err := json.Unmarshal(base.Payload, event)
 
 		if err != nil {

@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"github.com/julez-dev/neveralone/internal/auth"
 	"github.com/julez-dev/neveralone/internal/handler"
 	"github.com/julez-dev/neveralone/internal/rest"
 	"github.com/julez-dev/neveralone/internal/store"
@@ -63,6 +64,12 @@ func (a *App) Run(ctx context.Context) error {
 				Value:   ":8080",
 				EnvVars: []string{"HTTP_ADDR"},
 			},
+			&cli.StringFlag{
+				Name:    "signing-token",
+				Usage:   "Token to sign JWTs",
+				Value:   "super-secret",
+				EnvVars: []string{"SIGNING_TOKEN"},
+			},
 		},
 		Authors: []any{&mail.Address{Name: "julez-dev", Address: "julez-dev@pm.me"}},
 		Commands: []*cli.Command{
@@ -89,7 +96,6 @@ func (a *App) Run(ctx context.Context) error {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			userStore := store.NewUser()
 			sessionStore := store.NewSession()
 
 			tmplHandler, err := handler.NewTemplate(sessionStore)
@@ -98,13 +104,15 @@ func (a *App) Run(ctx context.Context) error {
 				return err
 			}
 
+			jwt := auth.NewJWT([]byte(c.String("signing-token")))
+
 			api := rest.New(
 				&rest.Config{HostAndPort: c.String("addr")},
 				logger,
 				tmplHandler,
-				userStore,
 				sessionStore,
 				tmplHandler,
+				jwt,
 			)
 
 			return api.Launch(c.Context)

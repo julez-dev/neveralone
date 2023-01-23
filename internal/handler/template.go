@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/julez-dev/neveralone/internal/party"
 	"html/template"
 	"io"
@@ -35,7 +36,7 @@ func (t *Template) ServeTemplate(writer io.Writer, data any) error {
 }
 
 func (t *Template) ServeHome(writer io.Writer) error {
-	return t.tmpl.ExecuteTemplate(writer, "index.html", nil)
+	return t.tmpl.ExecuteTemplate(writer, "index.gohtml", nil)
 }
 
 func (t *Template) ServeParty(writer io.Writer, id string) error {
@@ -45,13 +46,17 @@ func (t *Template) ServeParty(writer io.Writer, id string) error {
 		return fmt.Errorf("could not find session")
 	}
 
+	state := session.GetCurrentState()
+
+	spew.Dump(state)
+
 	data := struct {
-		Player  []*party.Player
-		VideoID string
+		Player []*party.Player
+		State  *party.VideoStateSnapshot
 	}{
-		Player:  session.GetPlayersCopy(),
-		VideoID: session.GetCurrentVideoID(),
+		Player: session.GetPlayersCopy(),
+		State:  state,
 	}
 
-	return t.tmpl.ExecuteTemplate(writer, "party.html", data)
+	return t.tmpl.ExecuteTemplate(writer, "party2.gohtml", data)
 }

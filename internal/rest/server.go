@@ -21,12 +21,13 @@ type Server struct {
 	config *Config
 	logger zerolog.Logger
 
+	jwtGenerator jwtGenerator
+
 	// handler
 	homeHandler  homeHandler
 	partyHandler partyTemplateHandler
 
 	// store
-	userStore    userStore
 	sessionStore sessionStore
 
 	closeCTX context.Context
@@ -36,18 +37,17 @@ func New(
 	config *Config,
 	logger zerolog.Logger,
 	homeHandler homeHandler,
-	userStore userStore,
 	sessionStore sessionStore,
 	partyHandler partyTemplateHandler,
-
+	jwtGenerator jwtGenerator,
 ) *Server {
 	return &Server{
 		config:       config,
 		logger:       logger,
 		homeHandler:  homeHandler,
-		userStore:    userStore,
 		sessionStore: sessionStore,
 		partyHandler: partyHandler,
+		jwtGenerator: jwtGenerator,
 	}
 }
 

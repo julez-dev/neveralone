@@ -50,10 +50,6 @@
     <div id="player"></div>
 </span>
 
-
-<span class="ws-log">
-</span>
-
 <script type="text/javascript" src="https://www.youtube.com/iframe_api"></script>
 
 <script>
@@ -67,37 +63,36 @@
     uri += '//' + loc.host;
     uri += loc.pathname + '/ws';
 
-    ws = new WebSocket(uri)
-
+    let ignoreEvent = false
+    let ws = new WebSocket(uri)
     ws.onopen = function () {}
-
-    const wsLog = document.querySelector(".ws-log")
-    let justGotUpdate = false;
+    ws.onclose = function () {
+        alert("WS was closed")
+    }
 
     ws.onmessage = function (evt) {
-        const item = document.createElement('p')
-        item.innerText = evt.data
-        wsLog.appendChild(item)
-
         const data = JSON.parse(evt.data)
 
         if(!playerReady) {
             return
         }
 
-        justGotUpdate = true
+        ignoreEvent = true;
         setTimeout(function () {
-            justGotUpdate = false
+            ignoreEvent = false
         }, 400)
 
         switch (data.action) {
+            case "rate":
+                player.setPlaybackRate(data.payload.rate)
+                break
             case "play":
-                player.seekTo(data.payload.timestamp)
                 player.playVideo()
+                player.seekTo(data.payload.timestamp)
                 break
             case "pause":
-                player.seekTo(data.payload.timestamp)
                 player.pauseVideo()
+                player.seekTo(data.payload.timestamp)
                 break
             case "load-video":
                 player.loadVideoById(
@@ -124,7 +119,6 @@
                         rate: rate,
                     }
                 }
-
                 ws.send(JSON.stringify(sendData))
         }
     }
@@ -140,26 +134,37 @@
         const data = {
             action: "load-video",
             payload: {
-                id: videoID
+                id: videoID,
             }
         }
 
         ws.send(JSON.stringify(data))
     })
 
-    // function is called by youtubes script once its ready to be used
+    // function is called by the script from YouTube once it's ready to be used
     function onYouTubeIframeAPIReady() {
-        console.log('youtube triggered')
         player = new YT.Player('player', {
             height: '1080',
             width: '1920',
-            playerVars: { 'autoplay': 0, controls: 2 },
+            playerVars: {
+                autoplay: 0,
+                controls: 2,
+                autoplay: 1,
+            },
             events: {
-                'onReady': onPlayerReady,
-                'onPlaybackQualityChange': function (event) {
-                    console.log("looool")
+                onReady: onPlayerReady,
+                onError: function (event) {},
+                onPlaybackRateChange: function (event) {
+                    data = {
+                        action: "rate",
+                        payload: {
+                            rate: event.data
+                        }
+                    }
+
+                    ws.send(JSON.stringify(data))
                 },
-                'onStateChange': onPlayerStateChange
+                onStateChange: onPlayerStateChange
             }
         });
     }
@@ -168,7 +173,7 @@
         playerReady = true
 
         {{ if .State.VideoID}}
-            player.loadVideoById(
+            event.target.loadVideoById(
                 {
                     'videoId': '{{  .State.VideoID }}',
                     'startSeconds': {{ .State.Timestamp }},
@@ -177,16 +182,18 @@
         {{end}}
 
         {{ if eq .State.PlayerState 1 }}
-            event.target.playVideo();
+            //  event.target.playVideo();
         {{end}}
 
         {{ if eq .State.PlayerState 2 }}
             event.target.pauseVideo()
         {{end}}
+
+        event.target.setPlaybackRate({{ .State.Rate }})
     }
 
     function onPlayerStateChange(event) {
-        if (justGotUpdate) {
+        if (ignoreEvent) {
             return
         }
 
@@ -203,7 +210,6 @@
                 ws.send(JSON.stringify(data))
                 break
             case YT.PlayerState.ENDED:
-                // console.log("ended")
                 break
             case YT.PlayerState.PAUSED:
                  data = {
@@ -216,13 +222,20 @@
                 ws.send(JSON.stringify(data))
                 break
             case YT.PlayerState.BUFFERING:
-                // console.log("buffering")
+                data = {
+                    action: "pause",
+                    payload: {
+                        timestamp: event.target.getCurrentTime()
+                    }
+                }
+
+                ws.send(JSON.stringify(data))
                 break
             case YT.PlayerState.CUED:
-                // console.log("cued")
                 break
         }
     }
+
 </script>
 </body>
 </html>

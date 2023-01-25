@@ -12,6 +12,7 @@ type VideoStateSnapshot struct {
 	PlayerState playerState
 	VideoID     string
 	Timestamp   float64
+	Rate        float64
 }
 
 func (v *VideoStateSnapshot) updateFromEvent(event any) {
@@ -29,11 +30,15 @@ func (v *VideoStateSnapshot) updateFromEvent(event any) {
 		v.PlayerState = Paused
 		v.Timestamp = e.Timestamp
 		return
+	case *rateVideoPayload:
+		v.Rate = e.rate
+		return
 	case *syncResponsePayload:
 		if e.State >= 0 && e.State < 3 {
 			v.PlayerState = e.State
 		}
 
+		v.Rate = e.Rate
 		v.VideoID = e.VideoID
 		v.Timestamp = e.Timestamp
 	}

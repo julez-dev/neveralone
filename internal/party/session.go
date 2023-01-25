@@ -63,6 +63,7 @@ func NewSession(logger zerolog.Logger, host *User) *Session {
 		DetachWS:     make(chan string),
 		state: &VideoStateSnapshot{
 			PlayerState: NoVideo,
+			Rate:        1,
 		},
 		o:     &sync.Once{},
 		pLock: &sync.Mutex{},
@@ -100,6 +101,7 @@ func (s *Session) GetCurrentState() *VideoStateSnapshot {
 		PlayerState: s.state.PlayerState,
 		VideoID:     s.state.VideoID,
 		Timestamp:   s.state.Timestamp,
+		Rate:        s.state.Rate,
 	}
 }
 

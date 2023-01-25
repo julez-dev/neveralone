@@ -98,7 +98,14 @@ func (a *App) Run(ctx context.Context) error {
 		Action: func(c *cli.Context) error {
 			sessionStore := store.NewSession()
 
-			tmplHandler, err := handler.NewTemplate(sessionStore)
+			//fsTemplate, err := handler.NewFSExecuter(template.HTMLTemplates, "html/*")
+			//
+			//if err != nil {
+			//	return err
+			//}
+
+			debugTemplate := handler.NewDebuggerExecuter("./internal/template/html/*")
+			tmplHandler, err := handler.NewTemplate(debugTemplate, sessionStore)
 
 			if err != nil {
 				return err

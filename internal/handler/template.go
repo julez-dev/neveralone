@@ -2,41 +2,70 @@ package handler
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/julez-dev/neveralone/internal/party"
 	"html/template"
 	"io"
+	"io/fs"
 )
-import ctemplate "github.com/julez-dev/neveralone/internal/template"
+
+type templateExecuter interface {
+	ExecuteTemplate(io.Writer, string, any) error
+}
+
+type FSExecuter struct {
+	tmpl *template.Template
+}
+
+func NewFSExecuter(fs fs.FS, glob string) (*FSExecuter, error) {
+	tmpl, err := template.ParseFS(fs, glob)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &FSExecuter{tmpl: tmpl}, nil
+}
+
+func (t *FSExecuter) ExecuteTemplate(w io.Writer, name string, data any) error {
+	return t.tmpl.ExecuteTemplate(w, name, data)
+}
+
+type DebuggerExecuter struct {
+	glob string
+}
+
+func NewDebuggerExecuter(glob string) *DebuggerExecuter {
+	return &DebuggerExecuter{glob: glob}
+}
+
+func (d *DebuggerExecuter) ExecuteTemplate(w io.Writer, name string, data any) error {
+	t, err := template.ParseGlob(d.glob)
+
+	if err != nil {
+		return err
+	}
+	
+	return t.ExecuteTemplate(w, name, data)
+}
 
 type Template struct {
-	tmpl  *template.Template
-	store sessionStore
+	executer templateExecuter
+	store    sessionStore
 }
 
 type sessionStore interface {
 	Get(string) (*party.Session, bool)
 }
 
-func NewTemplate(store sessionStore) (*Template, error) {
-	tmpl, err := template.ParseFS(ctemplate.HTMLTemplates, "html/*")
-
-	if err != nil {
-		return nil, err
-	}
-
+func NewTemplate(executer templateExecuter, store sessionStore) (*Template, error) {
 	return &Template{
-		tmpl:  tmpl,
-		store: store,
+		executer: executer,
+		store:    store,
 	}, nil
 }
 
-func (t *Template) ServeTemplate(writer io.Writer, data any) error {
-	return t.tmpl.Execute(writer, data)
-}
-
 func (t *Template) ServeHome(writer io.Writer) error {
-	return t.tmpl.ExecuteTemplate(writer, "index.gohtml", nil)
+	return t.executer.ExecuteTemplate(writer, "index.gohtml", nil)
 }
 
 func (t *Template) ServeParty(writer io.Writer, id string) error {
@@ -48,8 +77,6 @@ func (t *Template) ServeParty(writer io.Writer, id string) error {
 
 	state := session.GetCurrentState()
 
-	spew.Dump(state)
-
 	data := struct {
 		Player []*party.Player
 		State  *party.VideoStateSnapshot
@@ -58,5 +85,5 @@ func (t *Template) ServeParty(writer io.Writer, id string) error {
 		State:  state,
 	}
 
-	return t.tmpl.ExecuteTemplate(writer, "party2.gohtml", data)
+	return t.executer.ExecuteTemplate(writer, "party.gohtml", data)
 }

@@ -31,7 +31,7 @@ func (v *VideoStateSnapshot) updateFromEvent(event any) {
 		v.Timestamp = e.Timestamp
 		return
 	case *rateVideoPayload:
-		v.Rate = e.rate
+		v.Rate = e.Rate
 		return
 	case *syncResponsePayload:
 		if e.State >= 0 && e.State < 3 {

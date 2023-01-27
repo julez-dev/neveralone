@@ -13,6 +13,7 @@ const (
 	eventPlayVideo    = "play"
 	eventSyncResponse = "sync-response"
 	eventPlaybackRate = "rate"
+	eventMessage      = "message"
 )
 
 var (
@@ -32,7 +33,7 @@ type playVideoPayload struct {
 }
 
 type rateVideoPayload struct {
-	rate float64 `json:"rate"`
+	Rate float64 `json:"rate"`
 }
 
 type syncResponsePayload struct {
@@ -40,6 +41,10 @@ type syncResponsePayload struct {
 	VideoID   string      `json:"id"`
 	Rate      float64     `json:"rate"`
 	State     playerState `json:"state"`
+}
+
+type messagePayload struct {
+	Content string `json:"content"`
 }
 
 func parseEvent(b []byte) (any, error) {
@@ -91,6 +96,15 @@ func parseEvent(b []byte) (any, error) {
 		return event, nil
 	case eventPlaybackRate:
 		event := &rateVideoPayload{}
+		err := json.Unmarshal(base.Payload, event)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return event, nil
+	case eventMessage:
+		event := &messagePayload{}
 		err := json.Unmarshal(base.Payload, event)
 
 		if err != nil {

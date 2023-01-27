@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
-	"log"
+	"golang.org/x/net/html"
 	"sync"
 	"time"
 )
@@ -208,15 +208,29 @@ func (s *Session) Run(ctx context.Context) {
 			s.state.updateFromEvent(message.event)
 			s.vLock.Unlock()
 
-			var allowSelfSend bool
-
 			if _, ok := message.event.(*syncResponsePayload); ok {
 				break
 			}
 
+			var (
+				msg           []byte
+				allowSelfSend bool
+			)
+
+			msg = message.raw
+
 			if _, ok := message.event.(*loadVideoPayload); ok {
 				allowSelfSend = true
-				log.Println("self send allowed")
+			}
+
+			if event, ok := message.event.(*messagePayload); ok {
+				var err error
+				allowSelfSend = true
+				msg, err = s.buildChatMessage(message.playerID, event.Content)
+
+				if err != nil {
+					continue
+				}
 			}
 
 			for _, conn := range s.connections {
@@ -227,7 +241,7 @@ func (s *Session) Run(ctx context.Context) {
 						Str("content", string(message.raw)).
 						Msg("sending data to user")
 
-					conn.send <- message.raw
+					conn.send <- msg
 				}
 			}
 		case <-ctx.Done():
@@ -238,6 +252,36 @@ func (s *Session) Run(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (s *Session) buildChatMessage(senderID string, content string) ([]byte, error) {
+	// first find the player ID
+	s.pLock.Lock()
+	defer s.pLock.Unlock()
+
+	var senderName string
+	for _, player := range s.players {
+		if player.User.ID.String() == senderID {
+			senderName = player.User.Name
+		}
+	}
+
+	msg := &addMessageMessage{
+		actionMessage: actionMessage{Action: addMessage},
+		Payload: &addMessagePayload{
+			Sender:  senderName,
+			Content: html.EscapeString(content),
+		},
+	}
+
+	msgJSON, err := json.Marshal(msg)
+
+	if err != nil {
+		s.logger.Err(err).Msg("could not marshal add-message-message to JSON")
+		return nil, err
+	}
+
+	return msgJSON, nil
 }
 
 func (s *Session) CloseChannels() {

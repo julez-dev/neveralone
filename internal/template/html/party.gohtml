@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <title>Room</title>
     <style>
         body {
-            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            margin: 1rem 0 0;
             padding: 0;
         }
 
@@ -16,12 +20,70 @@
             align-items: center;
         }
 
+        .player-chat {
+            display: flex;
+            width: 95%;
+            flex-direction: row;
+        }
+
         .video-input {
             padding-bottom: 2rem;
         }
 
-        .ws-log {
-            text-align: center;
+        #player {
+            flex-grow: 1;
+        }
+
+        .chat {
+            display: flex;
+            flex-direction: column;
+            max-height: 1080px;
+            padding: 0.5rem 1rem;
+        }
+
+        .messages {
+            word-wrap: break-word;
+            width: 250px;
+            flex-grow: 1;
+            overflow: auto;
+        }
+
+        .chat-message {
+            padding: 0.5rem 0;
+        }
+
+        #chat-input {
+            border-top-style: groove;
+            border-right-style: groove;
+            border-left-style: groove;
+            border-bottom-style: groove;
+
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            resize: none;
+        }
+
+        .message-input {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #chat-button {
+            background-color: #9147ff;
+            padding: 0.5rem 1rem;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .chat-user {
+            font-weight: 700;
+            color: rgb(138, 43, 226);
+        }
+
+        .button-wrapper {
+            display: flex;
+            flex-direction: row-reverse;
         }
 
         .ws-log p {
@@ -31,14 +93,14 @@
 </head>
 <body>
 
-<span>
-    <p>Users in Watch-Party</p>
-    <ul>
-        {{range $player := .Player}}
-            <li>{{$player.User.Name}} - {{$player.IsHost}}</li>
-        {{end}}
-    </ul>
-</span>
+{{/*<span>*/}}
+{{/*    <p>Users in Watch-Party</p>*/}}
+{{/*    <ul>*/}}
+{{/*        {{range $player := .Player}}*/}}
+{{/*            <li>{{$player.User.Name}} - {{$player.IsHost}}</li>*/}}
+{{/*        {{end}}*/}}
+{{/*    </ul>*/}}
+{{/*</span>*/}}
 
 <span class="player-wrapper">
     <div class="video-input">
@@ -47,10 +109,22 @@
 
         <button id="load-video">Load new video</button>
     </div>
-    <div id="player"></div>
+    <div class="player-chat">
+        <div id="player"></div>
+        <div class="chat">
+            <div class="messages"></div>
+            <div class="message-input">
+                <textarea type="text" id="chat-input" placeholder="Message"></textarea>
+                <div class="button-wrapper">
+                    <button id="chat-button">Chat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </span>
 
-<script type="text/javascript" src="https://www.youtube.com/iframe_api"></script>
+<script type="text/javascript" src="https://www.youtube.com/iframe_api" referrerpolicy="no-referrer"></script>
 
 <script>
     // Open Websocket connection
@@ -64,8 +138,12 @@
     uri += loc.pathname + '/ws';
 
     let ignoreEvent = false
+    let socketReady = false
     let ws = new WebSocket(uri)
-    ws.onopen = function () {}
+
+    ws.onopen = function () {
+        socketReady = true;
+    }
     ws.onclose = function () {
         alert("WS was closed")
     }
@@ -120,6 +198,10 @@
                     }
                 }
                 ws.send(JSON.stringify(sendData))
+                break;
+            case "add-message":
+                addMessage(data.payload)
+                break
         }
     }
 
@@ -140,6 +222,37 @@
 
         ws.send(JSON.stringify(data))
     })
+
+    document.querySelector('#chat-button').addEventListener('click', function() {
+        sendMessageHandler()
+    })
+
+    document.querySelector('#chat-input').addEventListener('keydown', function(event) {
+        if (event.keyCode !== 13) {
+            return;
+        }
+
+        sendMessageHandler()
+    })
+
+    function sendMessageHandler() {
+        if(!socketReady) { return }
+
+        const input = document.querySelector("#chat-input")
+        const content = input.value;
+
+        if (content == "") { return; }
+
+        const data = {
+            action: "message",
+            payload: {
+                content: content,
+            }
+        }
+
+        ws.send(JSON.stringify(data))
+        input.value = ''
+    }
 
     // function is called by the script from YouTube once it's ready to be used
     function onYouTubeIframeAPIReady() {
@@ -236,6 +349,13 @@
         }
     }
 
+    function addMessage(message) {
+        const container = document.querySelector('.messages');
+        const div = document.createElement('div')
+        div.classList.add("chat-message");
+        div.innerHTML = `<span class="chat-user">${message.sender}</span>: ${message.content}`
+        container.appendChild(div)
+    }
 </script>
 </body>
 </html>

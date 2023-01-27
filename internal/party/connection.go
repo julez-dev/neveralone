@@ -1,7 +1,6 @@
 package party
 
 import (
-	"errors"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
 	"sync"
@@ -73,10 +72,7 @@ func (c *connection) readWS() {
 		parsed, err := parseEvent(data)
 
 		if err != nil {
-			if !errors.Is(err, errUnhandledEvent) {
-				c.logger.Err(err).Send()
-			}
-
+			c.logger.Err(err).Str("data", string(data)).Send()
 			continue
 		}
 

@@ -9,7 +9,7 @@
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            margin: 1rem 0 0;
+            margin: 0;
             padding: 0;
         }
 
@@ -18,16 +18,22 @@
             justify-content: center;
             flex-direction: column;
             align-items: center;
+            margin-top: 1rem;
         }
 
         .player-chat {
             display: flex;
             width: 95%;
             flex-direction: row;
+            max-height: 1080px;
         }
 
         .video-input {
-            padding-bottom: 2rem;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 1rem;
         }
 
         #player {
@@ -35,15 +41,18 @@
         }
 
         .chat {
+            margin-left: 1rem;
             display: flex;
             flex-direction: column;
-            max-height: 1080px;
             padding: 0.5rem 1rem;
+            border-radius: 1px;
+            border: 1px groove #7327fc;
+            flex-grow: 2;
+            max-width: 350px;
         }
 
         .messages {
             word-wrap: break-word;
-            width: 250px;
             flex-grow: 1;
             overflow: auto;
         }
@@ -73,7 +82,7 @@
             background-color: #9147ff;
             padding: 0.5rem 1rem;
             color: white;
-            border-radius: 4px;
+            border-radius: 2px;
         }
 
         .chat-user {
@@ -89,30 +98,120 @@
         .ws-log p {
             padding: 0.5rem;
         }
+
+        header {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            background-color: #9147ff;
+        }
+
+        .header-wrapper {
+            width: 95%;
+            display: flex;
+        }
+
+        #leave-session {
+            color: white;
+            font-size: 1.5rem;
+            background-color: transparent;
+            border: none
+        }
+
+        #load-video {
+            border: 0;
+            border: none;
+            background-color: #7327fc;
+            color: white;
+            padding: 1rem;
+
+            border-radius: 0px 40px 40px 00px;
+        }
+
+        #video-id {
+            min-height: 100%;
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            padding-left: 1rem;
+
+            border-radius: 40px 0px 0px 40px;
+        }
+
+        #leave-session:hover {
+            opacity: 0.9;
+        }
+
+        .input-wrapper {
+            display: flex;
+            flex-basis: 50rem;
+        }
+
+        .user-list-wrapper {
+            display: flex;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .user-list {
+            margin: 0;
+            list-style-type: none;
+            padding: 0 0 0 1rem;
+        }
+
+        .user-list li {
+            padding-right: 1rem;
+        }
     </style>
 </head>
 <body>
 
-{{/*<span>*/}}
-{{/*    <p>Users in Watch-Party</p>*/}}
-{{/*    <ul>*/}}
-{{/*        {{range $player := .Player}}*/}}
-{{/*            <li>{{$player.User.Name}} - {{$player.IsHost}}</li>*/}}
-{{/*        {{end}}*/}}
-{{/*    </ul>*/}}
-{{/*</span>*/}}
+<header>
+    <span class="header-wrapper">
+        <section style="display: flex; align-items: center;color: white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor"
+                 class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+              <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+              <path fill-rule="evenodd"
+                    d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+            </svg>
+            <h1>NeverAlone</h1>
+        </section>
+        <section class="video-input">
+            <span class="input-wrapper">
+                <input id="video-id" type="text" placeholder="Request with YouTube ID"
+                       aria-label="Request with YouTube ID">
+                <button id="load-video">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                         class="bi bi-search" viewBox="0 0 16 16">
+                      <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                </button>
+            </span>
+        </section>
+        <section style="display: flex;align-items: center;justify-content: flex-end">
+            <span style="display: flex; flex-direction: column;align-items: center;color: white;font-size: 1.2rem;margin-right: 2rem">
+                <p style="margin: 0">Your username</p>
+                <p style="margin: 0">{{ .User.Name }}</p>
+            </span>
+            <button id="leave-session" style="">Leave session</button>
+        </section>
+    </span>
+</header>
 
 <span class="player-wrapper">
-    <div class="video-input">
-        <label for="video-id">YouTube ID</label>
-        <input id="video-id" type="text">
-
-        <button id="load-video">Load new video</button>
-    </div>
     <div class="player-chat">
         <div id="player"></div>
         <div class="chat">
+            <span style="display: flex;flex-direction: column;align-items: center;">
+                <p>Users in Watch-Party:</p>
+                <ul class="user-list">
+                </ul>
+                <hr style="width: 80%">
+            </span>
+
             <div class="messages"></div>
+
             <div class="message-input">
                 <textarea type="text" id="chat-input" placeholder="Message"></textarea>
                 <div class="button-wrapper">
@@ -121,7 +220,6 @@
             </div>
         </div>
     </div>
-
 </span>
 
 <script type="text/javascript" src="https://www.youtube.com/iframe_api" referrerpolicy="no-referrer"></script>
@@ -151,7 +249,7 @@
     ws.onmessage = function (evt) {
         const data = JSON.parse(evt.data)
 
-        if(!playerReady) {
+        if (!playerReady) {
             return
         }
 
@@ -208,8 +306,10 @@
     let player;
     let playerReady = false;
 
-    document.querySelector('#load-video').addEventListener('click', function() {
-        if(!playerReady) { return }
+    document.querySelector('#load-video').addEventListener('click', function () {
+        if (!playerReady) {
+            return
+        }
 
         const videoID = document.querySelector('#video-id').value;
 
@@ -223,25 +323,31 @@
         ws.send(JSON.stringify(data))
     })
 
-    document.querySelector('#chat-button').addEventListener('click', function() {
+    document.querySelector('#chat-button').addEventListener('click', function () {
         sendMessageHandler()
     })
 
-    document.querySelector('#chat-input').addEventListener('keydown', function(event) {
+    document.querySelector('#chat-input').addEventListener('keydown', function (event) {
         if (event.keyCode !== 13) {
             return;
         }
 
+        event.preventDefault()
         sendMessageHandler()
     })
 
     function sendMessageHandler() {
-        if(!socketReady) { return }
+        if (!socketReady) {
+            return
+        }
 
         const input = document.querySelector("#chat-input")
         const content = input.value;
+        input.value = ''
 
-        if (content == "") { return; }
+        if (content == "") {
+            return;
+        }
 
         const data = {
             action: "message",
@@ -251,7 +357,6 @@
         }
 
         ws.send(JSON.stringify(data))
-        input.value = ''
     }
 
     // function is called by the script from YouTube once it's ready to be used
@@ -266,7 +371,8 @@
             },
             events: {
                 onReady: onPlayerReady,
-                onError: function (event) {},
+                onError: function (event) {
+                },
                 onPlaybackRateChange: function (event) {
                     data = {
                         action: "rate",
@@ -286,20 +392,20 @@
         playerReady = true
 
         {{ if .State.VideoID}}
-            event.target.loadVideoById(
-                {
-                    'videoId': '{{  .State.VideoID }}',
-                    'startSeconds': {{ .State.Timestamp }},
-                },
-            )
+        event.target.loadVideoById(
+            {
+                'videoId': '{{  .State.VideoID }}',
+                'startSeconds': {{ .State.Timestamp }},
+            },
+        )
         {{end}}
 
         {{ if eq .State.PlayerState 1 }}
-            //  event.target.playVideo();
+        //  event.target.playVideo();
         {{end}}
 
         {{ if eq .State.PlayerState 2 }}
-            event.target.pauseVideo()
+        event.target.pauseVideo()
         {{end}}
 
         event.target.setPlaybackRate({{ .State.Rate }})
@@ -313,7 +419,7 @@
         let data;
         switch (event.data) {
             case YT.PlayerState.PLAYING:
-                 data = {
+                data = {
                     action: "play",
                     payload: {
                         timestamp: event.target.getCurrentTime()
@@ -325,7 +431,7 @@
             case YT.PlayerState.ENDED:
                 break
             case YT.PlayerState.PAUSED:
-                 data = {
+                data = {
                     action: "pause",
                     payload: {
                         timestamp: event.target.getCurrentTime()
@@ -355,7 +461,23 @@
         div.classList.add("chat-message");
         div.innerHTML = `<span class="chat-user">${message.sender}</span>: ${message.content}`
         container.appendChild(div)
+        div.scrollIntoView()
     }
+
+    function addUser(username) {
+        const container = document.querySelector('.user-list');
+        const li = document.createElement('li')
+        li.innerText = username
+        container.appendChild(li)
+    }
+</script>
+
+<script>
+    (function (){
+        {{range $player := .Player}}
+            addUser({{$player.User.Name}});
+        {{end}}
+    })()
 </script>
 </body>
 </html>

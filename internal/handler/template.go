@@ -44,7 +44,7 @@ func (d *DebuggerExecuter) ExecuteTemplate(w io.Writer, name string, data any) e
 	if err != nil {
 		return err
 	}
-	
+
 	return t.ExecuteTemplate(w, name, data)
 }
 
@@ -68,7 +68,7 @@ func (t *Template) ServeHome(writer io.Writer) error {
 	return t.executer.ExecuteTemplate(writer, "index.gohtml", nil)
 }
 
-func (t *Template) ServeParty(writer io.Writer, id string) error {
+func (t *Template) ServeParty(writer io.Writer, id string, user *party.User) error {
 	session, ok := t.store.Get(id)
 
 	if !ok {
@@ -78,9 +78,11 @@ func (t *Template) ServeParty(writer io.Writer, id string) error {
 	state := session.GetCurrentState()
 
 	data := struct {
+		User   *party.User
 		Player []*party.Player
 		State  *party.VideoStateSnapshot
 	}{
+		User:   user,
 		Player: session.GetPlayersCopy(),
 		State:  state,
 	}

@@ -17,7 +17,7 @@ var (
 )
 
 type partyTemplateHandler interface {
-	ServeParty(writer io.Writer, id string) error
+	ServeParty(io.Writer, string, *party.User) error
 }
 
 type sessionStore interface {
@@ -62,7 +62,7 @@ func (s *Server) GetParty(c echo.Context) error {
 
 	session.Register <- user
 
-	return s.partyHandler.ServeParty(c.Response(), sessionID)
+	return s.partyHandler.ServeParty(c.Response(), sessionID, user)
 }
 
 func (s *Server) JoinWS(c echo.Context) error {

@@ -3,12 +3,14 @@ package rest
 import (
 	"context"
 	"errors"
+	"github.com/julez-dev/neveralone/internal/static"
 	"github.com/labstack/echo/v4"
 	emiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/ziflex/lecho/v3"
 	"golang.org/x/sync/errgroup"
 	"io"
+	"io/fs"
 	"net/http"
 	"time"
 )
@@ -93,6 +95,14 @@ func (s *Server) Launch(ctx context.Context) error {
 	e.GET("/party/:id", s.GetParty)
 	e.GET("/party/:id/ws", s.JoinWS)
 
+	sub, err := fs.Sub(static.StaticFiles, "static")
+
+	if err != nil {
+		return err
+	}
+
+	e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", http.FileServer(http.FS(sub)))))
+
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
 		<-ctx.Done()
@@ -103,7 +113,7 @@ func (s *Server) Launch(ctx context.Context) error {
 		return e.Shutdown(ctx)
 	})
 
-	err := e.Start(s.config.HostAndPort)
+	err = e.Start(s.config.HostAndPort)
 	if err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil

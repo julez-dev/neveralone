@@ -3,6 +3,7 @@ package party
 import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
+	"log"
 	"sync"
 	"time"
 )
@@ -80,6 +81,7 @@ func (c *connection) readWS() {
 			playerID: c.userID,
 			event:    parsed,
 			raw:      data,
+			sender:   c,
 		}
 	}
 }
@@ -108,7 +110,11 @@ func (c *connection) writeWS() {
 				return
 			}
 
-			w.Write(message)
+			_, err = w.Write(message)
+
+			if err != nil {
+				log.Println(err)
+			}
 
 			if err := w.Close(); err != nil {
 				return

@@ -46,6 +46,7 @@ type message struct {
 	playerID string
 	event    any
 	raw      []byte
+	sender   *connection
 }
 
 func NewSession(logger zerolog.Logger, host *User) *Session {
@@ -193,12 +194,83 @@ func (s *Session) Run(ctx context.Context) {
 				conn.writeWS()
 			}(newConn)
 
+			// Announce new active connection to client
+			// + send already connected clients to new connection
+			s.pLock.Lock()
+			newConnPlayer := s.players[ws.PlayerID]
+			s.pLock.Unlock()
+
+			for _, connection := range s.connections {
+				var userName string
+
+				s.pLock.Lock()
+				player := s.players[connection.userID]
+				if player != nil {
+					userName = player.User.Name
+				}
+				s.pLock.Unlock()
+
+				// Send new connected client all already connected clients
+				msg := &addActiveConnectionMessage{
+					actionMessage: actionMessage{Action: addActiveConnection},
+					Payload: &activeConnectionUserPayload{
+						UserName: html.EscapeString(userName),
+						UserID:   html.EscapeString(connection.userID),
+					},
+				}
+
+				msgJSON, err := json.Marshal(msg)
+
+				if err != nil {
+					s.logger.Err(err).Msg("could not marshal add-active-connection to JSON")
+				} else {
+					newConn.send <- msgJSON
+				}
+
+				// Announce new client to already existing clients
+				if player != nil && player.User.ID != newConnPlayer.User.ID {
+					msg = &addActiveConnectionMessage{
+						actionMessage: actionMessage{Action: addActiveConnection},
+						Payload: &activeConnectionUserPayload{
+							UserName: html.EscapeString(newConnPlayer.User.Name),
+							UserID:   html.EscapeString(newConnPlayer.User.ID.String()),
+						},
+					}
+
+					msgJSON, err := json.Marshal(msg)
+
+					if err != nil {
+						s.logger.Err(err).Msg("could not marshal add-active-connection to JSON")
+					} else {
+						connection.send <- msgJSON
+					}
+				}
+			}
+
 			ticker.Reset(usageCheckWait)
 			stateTicker.Reset(requestStateWait)
 		case id := <-s.DetachWS:
 			if conn, ok := s.connections[id]; ok {
 				delete(s.connections, id)
 				conn.closeSendOnce()
+			}
+
+			msg := &removeActiveConnectionMessage{
+				actionMessage: actionMessage{Action: removeActiveConnection},
+				Payload: &removeConnectionUserPayload{
+					UserID: html.EscapeString(id),
+				},
+			}
+
+			msgJSON, err := json.Marshal(msg)
+
+			if err != nil {
+				s.logger.Err(err).Msg("could not marshal remove-active-connection to JSON")
+				continue
+			}
+
+			for _, connection := range s.connections {
+				connection.send <- msgJSON
 			}
 
 			ticker.Reset(usageCheckWait)
@@ -269,7 +341,7 @@ func (s *Session) buildChatMessage(senderID string, content string) ([]byte, err
 	msg := &addMessageMessage{
 		actionMessage: actionMessage{Action: addMessage},
 		Payload: &addMessagePayload{
-			Sender:  senderName,
+			Sender:  html.EscapeString(senderName),
 			Content: html.EscapeString(content),
 		},
 	}

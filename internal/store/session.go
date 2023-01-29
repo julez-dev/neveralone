@@ -18,6 +18,10 @@ func (s *Session) Get(id string) (*party.Session, bool) {
 	return s.m.Get(id)
 }
 
+func (s *Session) GetAll() map[string]*party.Session {
+	return s.m.Items()
+}
+
 func (s *Session) Set(session *party.Session) {
 	s.m.Set(session.ID.String(), session)
 }

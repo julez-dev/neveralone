@@ -2,28 +2,150 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        button {
-            padding: 4rem;
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>NeverAlone</title>
 </head>
 <body>
-<form action="/party" method="post">
-    <button type="submit">
-        Create a room
-    </button>
-</form>
+{{template "header_index" .}}
+
+<style>
+    .hero {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 2rem;
+        padding: 1.5rem;
+    }
+
+    .hero-heading {
+        max-width: 32rem;
+        font-size: 3rem;
+        line-height: 1;
+    }
+
+    .hero-text {
+        max-width: 28rem;
+        font-size: 1.5rem;
+        line-height: 2rem;
+        text-align: left;
+    }
+
+    .party-button {
+        background-color: #9147ff;
+        padding: 4rem;
+        font-size: 1.5rem;
+        line-height: 2rem;
+        color: white;
+        border-radius: 6px;
+    }
+
+    .hero-heading-2 {
+        max-width: 32rem;
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .hero-2 {
+        display: flex;
+        flex-direction: column;
+        padding: 1.5rem;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .room-wrapper {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .room-info-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .user-list {
+        margin: 0;
+        list-style-type: none;
+        padding: 0 0 0 1rem;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .rejoin-button {
+        background-color: #9147ff;
+        padding: 2rem;
+        color: white;
+        border-radius: 6px;
+    }
+</style>
+
+<section class="hero">
+    <article>
+        <h2 class="hero-heading">Never watch YouTube videos alone again</h2>
+        <p class="hero-text">
+            Join a room together with your friends or random people on the internet and watch videos together.
+        </p>
+    </article>
+    <img src="/static/yt_logo_rgb_dark_crop.png" alt="youtube logo"/>
+</section>
+
+<section class="hero">
+    <article>
+        <form action="/party" method="post">
+            <button type="submit" class="party-button">
+                Create a private room
+            </button>
+        </form>
+    </article>
+
+    <article>
+        <p class="hero-text">or</p>
+        <hr class="hero-text"/>
+    </article>
+
+    <article>
+        <form action="/party" method="post">
+            <button type="submit" class="party-button">
+                Create a custom room
+            </button>
+        </form>
+    </article>
+</section>
+
+{{ if .Sessions }}
+    <section class="hero-2">
+        <h2 class="hero-heading-2">Browse your rooms</h2>
+        <span class="room-wrapper">
+        {{ range $session := .Sessions }}
+            <article style="max-width: 28rem;max-height: 28rem">
+                <form action="/party/{{$session.ID}}" method="get">
+                    <button type="submit" class="rejoin-button">
+                        <section class="room-info-wrapper">
+                            <h3 style="margin: 0">{{$session.ID}}</h3>
+                            <hr style="width: 70%" />
+                            <ul class="user-list">
+                               {{ range $player := $session.Player }}
+                                   <li>{{$player.User.Name}}</li>
+                                {{ end }}
+                            </ul>
+                        </section>
+                    </button>
+                </form>
+            </article>
+        {{ end }}
+        </span>
+    </section>
+{{end}}
+
+
 
 
 </body>

@@ -3,7 +3,6 @@ module github.com/julez-dev/neveralone
 go 1.19
 
 require (
-	github.com/davecgh/go-spew v1.1.1
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/google/uuid v1.3.0
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
@@ -13,6 +12,7 @@ require (
 	github.com/rs/zerolog v1.28.0
 	github.com/urfave/cli/v3 v3.0.0-alpha2
 	github.com/ziflex/lecho/v3 v3.3.0
+	golang.org/x/net v0.5.0
 	golang.org/x/sync v0.1.0
 )
 
@@ -27,7 +27,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
-	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 	golang.org/x/time v0.3.0 // indirect

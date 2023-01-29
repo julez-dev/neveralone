@@ -55,6 +55,7 @@ type Template struct {
 
 type sessionStore interface {
 	Get(string) (*party.Session, bool)
+	GetAll() map[string]*party.Session
 }
 
 func NewTemplate(executer templateExecuter, store sessionStore) (*Template, error) {
@@ -64,8 +65,41 @@ func NewTemplate(executer templateExecuter, store sessionStore) (*Template, erro
 	}, nil
 }
 
-func (t *Template) ServeHome(writer io.Writer) error {
-	return t.executer.ExecuteTemplate(writer, "index.gohtml", nil)
+func (t *Template) ServeHome(writer io.Writer, loggedUser *party.User) error {
+	type sessionData struct {
+		ID     string
+		Player []*party.Player
+	}
+
+	var allSessionData []*sessionData
+
+	session := t.store.GetAll()
+
+	for _, session := range session {
+		users := session.GetPlayersCopy()
+
+		for _, user := range users {
+			// If user is member of this room
+			if user.User.ID == loggedUser.ID {
+				allSessionData = append(allSessionData, &sessionData{
+					ID:     session.ID.String(),
+					Player: users,
+				})
+				break
+			}
+
+		}
+	}
+
+	data := struct {
+		User     *party.User
+		Sessions []*sessionData
+	}{
+		User:     loggedUser,
+		Sessions: allSessionData,
+	}
+
+	return t.executer.ExecuteTemplate(writer, "index.gohtml", data)
 }
 
 func (t *Template) ServeParty(writer io.Writer, id string, user *party.User) error {

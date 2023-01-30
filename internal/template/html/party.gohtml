@@ -221,7 +221,7 @@
     let player;
     let playerReady = false;
 
-    document.querySelector('#load-video').addEventListener('click', function () {
+    document.querySelector('#load-video')?.addEventListener('click', function () {
         if (!playerReady) {
             return
         }

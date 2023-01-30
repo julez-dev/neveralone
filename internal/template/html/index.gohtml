@@ -111,13 +111,12 @@
         <hr class="hero-text"/>
     </article>
 
-    <article>
-        <form action="/party" method="post">
-            <button type="submit" class="party-button">
-                Create a custom room
-            </button>
-        </form>
-    </article>
+    <a href="/party">
+        <button class="party-button">
+            Create a custom room
+        </button>
+    </a>
+
 </section>
 
 {{ if .Sessions }}
@@ -145,7 +144,30 @@
     </section>
 {{end}}
 
-
+{{ if .PublicSessions }}
+    <section class="hero-2">
+        <h2 class="hero-heading-2">Browse public rooms</h2>
+        <span class="room-wrapper">
+        {{ range $session := .PublicSessions }}
+            <article style="max-width: 28rem;max-height: 28rem">
+                <form action="/party/{{$session.ID}}" method="get">
+                    <button type="submit" class="rejoin-button">
+                        <section class="room-info-wrapper">
+                            <h3 style="margin: 0">{{$session.ID}}</h3>
+                            <hr style="width: 70%" />
+                            <ul class="user-list">
+                               {{ range $player := $session.Player }}
+                                   <li>{{$player.User.Name}}</li>
+                               {{ end }}
+                            </ul>
+                        </section>
+                    </button>
+                </form>
+            </article>
+        {{ end }}
+        </span>
+    </section>
+{{end}}
 
 
 </body>

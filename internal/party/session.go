@@ -19,6 +19,8 @@ const (
 type Session struct {
 	logger zerolog.Logger
 	ID     uuid.UUID
+	config *Config
+	cLock  *sync.Mutex
 
 	state *VideoStateSnapshot
 	vLock *sync.Mutex
@@ -49,12 +51,14 @@ type message struct {
 	sender   *connection
 }
 
-func NewSession(logger zerolog.Logger, host *User) *Session {
+func NewSession(logger zerolog.Logger, host *User, config *Config) *Session {
 	id := uuid.New()
 
 	s := &Session{
 		logger:       logger.With().Str("room-id", id.String()).Logger(),
 		ID:           id,
+		config:       config,
+		cLock:        &sync.Mutex{},
 		players:      map[string]*Player{},
 		connections:  map[string]*connection{},
 		messageQueue: make(chan *message),
@@ -95,6 +99,12 @@ func (s *Session) GetPlayersCopy() []*Player {
 	return copied
 }
 
+func (s *Session) GetConfig() *Config {
+	s.cLock.Lock()
+	defer s.cLock.Unlock()
+	return s.config
+}
+
 func (s *Session) GetCurrentState() *VideoStateSnapshot {
 	s.vLock.Lock()
 	defer s.vLock.Unlock()
@@ -123,10 +133,23 @@ func (s *Session) Run(ctx context.Context) {
 				break
 			}
 
+			cfg := s.GetConfig()
+			hostID := s.getHostID()
+
 			// get first open connection
 			var conn *connection
 			for _, c := range s.connections {
-				conn = c
+				if cfg.AllowOnlyHost {
+					if c.userID == hostID {
+						conn = c
+					}
+				} else {
+					conn = c
+					break
+				}
+			}
+
+			if conn == nil {
 				break
 			}
 
@@ -275,6 +298,18 @@ func (s *Session) Run(ctx context.Context) {
 
 			ticker.Reset(usageCheckWait)
 		case message := <-s.messageQueue:
+			cfg := s.GetConfig()
+			hostID := s.getHostID()
+
+			// If host only mode - block almost all messages
+			if cfg.AllowOnlyHost && message.playerID != hostID {
+				switch message.event.(type) {
+				case *messagePayload:
+				default:
+					continue
+				}
+			}
+
 			// handle messages coming from the socket
 			s.vLock.Lock()
 			s.state.updateFromEvent(message.event)
@@ -324,6 +359,20 @@ func (s *Session) Run(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (s *Session) getHostID() string {
+	players := s.GetPlayersCopy()
+
+	var hostID string
+	for _, p := range players {
+		if p.IsHost {
+			hostID = p.User.ID.String()
+			break
+		}
+	}
+
+	return hostID
 }
 
 func (s *Session) buildChatMessage(senderID string, content string) ([]byte, error) {

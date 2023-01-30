@@ -92,6 +92,7 @@ func (s *Server) Launch(ctx context.Context) error {
 	e.GET("/", s.GetHome)
 
 	e.POST("/party", s.CreateParty)
+	e.GET("/party", s.CreatePartyCustom)
 	e.GET("/party/:id", s.GetParty)
 	e.GET("/party/:id/ws", s.JoinWS)
 

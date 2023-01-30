@@ -71,32 +71,45 @@ func (t *Template) ServeHome(writer io.Writer, loggedUser *party.User) error {
 		Player []*party.Player
 	}
 
-	var allSessionData []*sessionData
+	var (
+		userSessions   []*sessionData
+		publicSessions []*sessionData
+	)
 
 	session := t.store.GetAll()
 
+OUTER:
 	for _, session := range session {
 		users := session.GetPlayersCopy()
 
 		for _, user := range users {
 			// If user is member of this room
 			if user.User.ID == loggedUser.ID {
-				allSessionData = append(allSessionData, &sessionData{
+				userSessions = append(userSessions, &sessionData{
 					ID:     session.ID.String(),
 					Player: users,
 				})
-				break
+				continue OUTER
 			}
+		}
 
+		cfg := session.GetConfig()
+		if cfg.Visibility == party.PublicLobby {
+			publicSessions = append(publicSessions, &sessionData{
+				ID:     session.ID.String(),
+				Player: users,
+			})
 		}
 	}
 
 	data := struct {
-		User     *party.User
-		Sessions []*sessionData
+		User           *party.User
+		Sessions       []*sessionData
+		PublicSessions []*sessionData
 	}{
-		User:     loggedUser,
-		Sessions: allSessionData,
+		User:           loggedUser,
+		Sessions:       userSessions,
+		PublicSessions: publicSessions,
 	}
 
 	return t.executer.ExecuteTemplate(writer, "index.gohtml", data)
@@ -110,16 +123,46 @@ func (t *Template) ServeParty(writer io.Writer, id string, user *party.User) err
 	}
 
 	state := session.GetCurrentState()
+	cfg := session.GetConfig()
+	player := session.GetPlayersCopy()
+
+	showVideoInput := true
+
+	if cfg.AllowOnlyHost {
+		var hostID string
+		for _, player := range player {
+			if player.IsHost {
+				hostID = player.User.ID.String()
+				break
+			}
+		}
+
+		if hostID != user.ID.String() {
+			showVideoInput = false
+		}
+	}
 
 	data := struct {
-		User   *party.User
-		Player []*party.Player
-		State  *party.VideoStateSnapshot
+		User           *party.User
+		Player         []*party.Player
+		State          *party.VideoStateSnapshot
+		ShowVideoInput bool
 	}{
-		User:   user,
-		Player: session.GetPlayersCopy(),
-		State:  state,
+		User:           user,
+		Player:         player,
+		State:          state,
+		ShowVideoInput: showVideoInput,
 	}
 
 	return t.executer.ExecuteTemplate(writer, "party.gohtml", data)
+}
+
+func (t *Template) ServeCreateParty(writer io.Writer, user *party.User) error {
+	data := struct {
+		User *party.User
+	}{
+		User: user,
+	}
+
+	return t.executer.ExecuteTemplate(writer, "create_party.gohtml", data)
 }

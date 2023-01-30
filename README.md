@@ -8,6 +8,10 @@ neveralone is a web service which allows you to watch YouTube videos together wi
 
 Every user joins a room then the playback of the videos is synchronized between all open sessions.
 
+## Example preview
+
+![Example image of a room with a video](./img/preview.png)
+
 ## Routes
 
 ### /

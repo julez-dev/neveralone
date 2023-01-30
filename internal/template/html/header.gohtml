@@ -15,6 +15,7 @@
             </section>
             </a>
             <section class="video-input">
+                {{ if .ShowVideoInput }}
                 <span class="input-wrapper">
                     <input id="video-id" type="text" placeholder="Request with YouTube ID"
                            aria-label="Request with YouTube ID">
@@ -25,6 +26,7 @@
                         </svg>
                     </button>
                 </span>
+                    {{ end }}
             </section>
             <section style="display: flex;align-items: center;justify-content: flex-end">
                 <span style="display: flex; flex-direction: column;align-items: center;color: white;font-size: 1.2rem;margin-right: 2rem">

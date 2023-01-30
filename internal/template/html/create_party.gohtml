@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>NeverAlone - Create Room</title>
+</head>
+<body>
+{{template "header_index" .}}
+
+<style>
+    form {
+        margin: 10rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .section-wrapper {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #9147ff;
+        padding: 5rem;
+        border-radius: 30px;
+    }
+
+    h2 {
+        max-width: 32rem;
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    label {
+        font-size: 1.5rem;
+    }
+
+    input[type="radio"] {
+        height: 1.2rem;
+        width: 1.2rem;
+        margin-right: 0.5rem;
+        accent-color: #9147ff;
+    }
+
+    .radio-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .create-wrapper {
+        display: flex;
+        flex-direction: row-reverse;
+    }
+
+    .party-button {
+        background-color: #9147ff;
+        padding: 1rem;
+        margin-top: 1rem;
+        font-size: 1.5rem;
+        line-height: 2rem;
+        color: white;
+        border-radius: 6px;
+    }
+
+    .passphrase-input {
+        display: flex;
+        flex-direction: column;
+        margin-top: 1rem;
+    }
+
+    .passphrase-input input {
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+        width: 50%;
+    }
+</style>
+
+<form method="post" action="/party">
+    <input type="hidden" name="is_custom" value="true">
+    <section class="section-wrapper">
+        <section class="group-wrapper">
+            <h2>Should the room be public or private?</h2>
+            <section class="radio-wrapper">
+                <label>
+                    <input type="radio" name="visibility" value="public">
+                    Public
+                </label>
+
+                <label>
+                    <input type="radio" name="visibility" value="private" checked>
+                    Private
+                </label>
+            </section>
+        </section>
+
+        <section class="group-wrapper">
+            <h2>Should the room have a passphrase?</h2>
+            <section class="radio-wrapper">
+                <label>
+                    <input type="radio" name="passphrase" id="yes_passphrase" value="yes_passphrase">
+                    Yes
+                </label>
+
+                <label>
+                    <input type="radio" name="passphrase" value="no_passphrase" id="no_passphrase" checked>
+                    No
+                </label>
+
+                <label class="passphrase-input">
+                    Passphrase
+                    <input type="password" name="passphrase-lobby">
+                </label>
+            </section>
+        </section>
+
+        <section class="group-wrapper">
+            <h2>Only allow host to sync actions?</h2>
+            <section class="radio-wrapper">
+                <label>
+                    <input type="radio" name="only_host" value="yes_only_host">
+                    Yes
+                </label>
+                <label>
+                    <input type="radio" name="only_host" value="no_only_host" checked>
+                    No
+                </label>
+            </section>
+        </section>
+
+        <section class="create-wrapper">
+            <button type="submit" class="party-button">
+                Create room
+            </button>
+        </section>
+    </section>
+</form>
+
+<script>
+    (function () {
+        const input = document.querySelector('.passphrase-input')
+        input.style.visibility = "hidden";
+
+        document.querySelector('#yes_passphrase').addEventListener('click', function () {
+            input.style.visibility = "visible";
+        })
+
+        document.querySelector('#no_passphrase').addEventListener('click', function () {
+            input.style.visibility = "hidden";
+        })
+    })()
+</script>
+
+</body>
+</html>

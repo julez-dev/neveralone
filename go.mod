@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/labstack/echo/v4 v4.10.0
 	github.com/orcaman/concurrent-map/v2 v2.0.1
-	github.com/rs/zerolog v1.28.0
+	github.com/rs/zerolog v1.29.0
 	github.com/urfave/cli/v3 v3.0.0-alpha2
 	github.com/ziflex/lecho/v3 v3.3.0
 	golang.org/x/net v0.5.0

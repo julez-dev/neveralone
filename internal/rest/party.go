@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/julez-dev/neveralone/internal/party"
@@ -19,6 +20,7 @@ var (
 type partyTemplateHandler interface {
 	ServeParty(io.Writer, string, *party.User) error
 	ServeCreateParty(io.Writer, *party.User) error
+	ServeJoinPartyPassword(io.Writer, *party.User, string, bool) error
 }
 
 type sessionStore interface {
@@ -97,6 +99,21 @@ func (s *Server) GetParty(c echo.Context) error {
 		return c.NoContent(http.StatusNotFound)
 	}
 
+	cfg := session.GetConfig()
+
+	// session has a password and user was not already connected
+	if cfg.HasPassphrase && !session.HasPlayerIDInLobby(user.ID.String()) {
+		uPass := c.FormValue("passphrase-lobby")
+
+		if uPass == "" {
+			return s.partyHandler.ServeJoinPartyPassword(c.Response(), user, session.ID.String(), false)
+		}
+
+		if subtle.ConstantTimeCompare([]byte(uPass), []byte(cfg.Passphrase)) != 1 {
+			return s.partyHandler.ServeJoinPartyPassword(c.Response(), user, session.ID.String(), true)
+		}
+	}
+
 	session.Register <- user
 
 	return s.partyHandler.ServeParty(c.Response(), sessionID, user)
@@ -116,16 +133,7 @@ func (s *Server) JoinWS(c echo.Context) error {
 		return c.NoContent(http.StatusNotFound)
 	}
 
-	var isInLobby bool
-	players := session.GetPlayersCopy()
-	for _, player := range players {
-		if player.User.ID == user.ID {
-			isInLobby = true
-			break
-		}
-	}
-
-	if !isInLobby {
+	if !session.HasPlayerIDInLobby(user.ID.String()) {
 		return c.NoContent(http.StatusUnauthorized)
 	}
 

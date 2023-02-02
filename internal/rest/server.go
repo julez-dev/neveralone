@@ -93,7 +93,7 @@ func (s *Server) Launch(ctx context.Context) error {
 
 	e.POST("/party", s.CreateParty)
 	e.GET("/party", s.CreatePartyCustom)
-	e.GET("/party/:id", s.GetParty)
+	e.Match([]string{http.MethodGet, http.MethodPost}, "/party/:id", s.GetParty)
 	e.GET("/party/:id/ws", s.JoinWS)
 
 	sub, err := fs.Sub(static.StaticFiles, "static")

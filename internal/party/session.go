@@ -116,6 +116,19 @@ func (s *Session) GetCurrentState() *VideoStateSnapshot {
 	}
 }
 
+func (s *Session) HasPlayerIDInLobby(id string) bool {
+	s.pLock.Lock()
+	defer s.pLock.Unlock()
+
+	for _, p := range s.players {
+		if p.User.ID.String() == id {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *Session) Run(ctx context.Context) {
 	ticker := time.NewTicker(usageCheckWait)
 	stateTicker := time.NewTicker(requestStateWait)

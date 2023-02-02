@@ -166,3 +166,17 @@ func (t *Template) ServeCreateParty(writer io.Writer, user *party.User) error {
 
 	return t.executer.ExecuteTemplate(writer, "create_party.gohtml", data)
 }
+
+func (t *Template) ServeJoinPartyPassword(writer io.Writer, user *party.User, sessionID string, wrongPassword bool) error {
+	data := struct {
+		User          *party.User
+		SessionID     string
+		WrongPassword bool
+	}{
+		User:          user,
+		SessionID:     sessionID,
+		WrongPassword: wrongPassword,
+	}
+
+	return t.executer.ExecuteTemplate(writer, "login.gohtml", data)
+}

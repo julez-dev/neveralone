@@ -6,7 +6,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
-    <title>NeverAlone - Create Room</title>
+    <title>NeverAlone - Join Room</title>
 </head>
 <body>
 {{template "header_index" .}}
@@ -74,84 +74,28 @@
     .passphrase-input input {
         padding: 0.5rem;
         margin-top: 0.5rem;
-        width: 50%;
     }
 </style>
 
-<form method="post" action="/party">
-    <input type="hidden" name="is_custom" value="true">
+<form method="post" action="/party/{{.SessionID}}">
     <section class="section-wrapper">
         <section class="group-wrapper">
-            <h2>Should the room be public or private?</h2>
+            <h2>Enter passphrase for room</h2>
             <section class="radio-wrapper">
-                <label>
-                    <input type="radio" name="visibility" value="public">
-                    Public
-                </label>
-
-                <label>
-                    <input type="radio" name="visibility" value="private" checked>
-                    Private
-                </label>
-            </section>
-        </section>
-
-        <section class="group-wrapper">
-            <h2>Should the room have a passphrase?</h2>
-            <section class="radio-wrapper">
-                <label>
-                    <input type="radio" name="passphrase" id="yes_passphrase" value="yes_passphrase">
-                    Yes
-                </label>
-
-                <label>
-                    <input type="radio" name="passphrase" value="no_passphrase" id="no_passphrase" checked>
-                    No
-                </label>
-
                 <label class="passphrase-input">
-                    Passphrase
+                    {{ if .WrongPassword }} Passphrase was wrong, try again {{ else }} Passphrase {{end}}
                     <input type="password" name="passphrase-lobby">
-                </label>
-            </section>
-        </section>
-
-        <section class="group-wrapper">
-            <h2>Only allow host to sync actions?</h2>
-            <section class="radio-wrapper">
-                <label>
-                    <input type="radio" name="only_host" value="yes_only_host">
-                    Yes
-                </label>
-                <label>
-                    <input type="radio" name="only_host" value="no_only_host" checked>
-                    No
                 </label>
             </section>
         </section>
 
         <section class="create-wrapper">
             <button type="submit" class="party-button">
-                Create room
+                Join room
             </button>
         </section>
     </section>
 </form>
-
-<script>
-    (function () {
-        const input = document.querySelector('.passphrase-input')
-        input.style.visibility = "hidden";
-
-        document.querySelector('#yes_passphrase').addEventListener('click', function () {
-            input.style.visibility = "visible";
-        })
-
-        document.querySelector('#no_passphrase').addEventListener('click', function () {
-            input.style.visibility = "hidden";
-        })
-    })()
-</script>
 
 {{template "dark_mode"}}
 </body>

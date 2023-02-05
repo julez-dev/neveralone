@@ -27,8 +27,8 @@ builds:
 dockers:
     # Templates of the Docker image names.
     - image_templates:
-      - "ghcr.io/julez-dev/neveralone:latest"
-      - "ghcr.io/julez-dev/neveralone:{{ .Tag }}"
+      - "ghcr.io/neveralone/neveralone:latest"
+      - "ghcr.io/neveralone/neveralone:{{ .Tag }}"
 
 release:
   draft: true

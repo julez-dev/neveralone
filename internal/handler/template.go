@@ -8,7 +8,7 @@ import (
 	"io/fs"
 )
 
-type templateExecuter interface {
+type TemplateExecuter interface {
 	ExecuteTemplate(io.Writer, string, any) error
 }
 
@@ -49,7 +49,7 @@ func (d *DebuggerExecuter) ExecuteTemplate(w io.Writer, name string, data any) e
 }
 
 type Template struct {
-	executer templateExecuter
+	executer TemplateExecuter
 	store    sessionStore
 }
 
@@ -58,7 +58,7 @@ type sessionStore interface {
 	GetAll() map[string]*party.Session
 }
 
-func NewTemplate(executer templateExecuter, store sessionStore) (*Template, error) {
+func NewTemplate(executer TemplateExecuter, store sessionStore) (*Template, error) {
 	return &Template{
 		executer: executer,
 		store:    store,

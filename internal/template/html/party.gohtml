@@ -4,6 +4,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
     <meta charset="UTF-8">
     <title>NeverAlone - Room</title>
     <style>
@@ -129,6 +131,7 @@
 </span>
 
 <script type="text/javascript" src="https://www.youtube.com/iframe_api" referrerpolicy="no-referrer"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js" referrerpolicy="no-referrer"></script>
 
 <script>
     // Open Websocket connection
@@ -215,7 +218,21 @@
         socketReady = true;
     }
     ws.onclose = function () {
-        alert("WS was closed")
+        Toastify({
+            text: "The connection was closed, consider refreshing the page and closing other open tabs",
+            duration: 5000,
+            close: true,
+            offset: {
+                x: '',
+                y: '4rem'
+            },
+            style: {
+                background: "linear-gradient(to right, #f53d43, #eb0e15)",
+            },
+            gravity: "top",
+            position: "right",
+            stopOnFocus: true,
+        }).showToast();
     }
 
     let player;

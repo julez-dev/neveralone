@@ -5,6 +5,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
     <meta charset="UTF-8">
     <title>NeverAlone</title>
 </head>
@@ -170,5 +172,32 @@
 {{end}}
 
 {{template "dark_mode"}}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js" referrerpolicy="no-referrer"></script>
+
+<script>
+    (function () {
+        const param = new URLSearchParams(location.search)
+        if (!param.has('not_found')) {
+            return
+        }
+
+
+        Toastify({
+            text: "The requested room does not exist",
+            duration: 3000,
+            close: true,
+            offset: {
+                x: '',
+                y: '4rem'
+            },
+            style: {
+                background: "linear-gradient(to right, #f53d43, #eb0e15)",
+            },
+            gravity: "top",
+            position: "right",
+            stopOnFocus: true,
+        }).showToast();
+    }())
+</script>
 </body>
 </html>

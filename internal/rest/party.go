@@ -96,7 +96,7 @@ func (s *Server) GetParty(c echo.Context) error {
 	session, ok := s.sessionStore.Get(sessionID)
 
 	if !ok {
-		return c.NoContent(http.StatusNotFound)
+		return c.Redirect(http.StatusMovedPermanently, "/?not_found=1")
 	}
 
 	cfg := session.GetConfig()

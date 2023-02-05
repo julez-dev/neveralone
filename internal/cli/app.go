@@ -7,6 +7,7 @@ import (
 	"github.com/julez-dev/neveralone/internal/handler"
 	"github.com/julez-dev/neveralone/internal/rest"
 	"github.com/julez-dev/neveralone/internal/store"
+	"github.com/julez-dev/neveralone/internal/template"
 	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v3"
 	"io"
@@ -37,20 +38,6 @@ func New(w io.Writer, r io.Reader, args []string, version string, commit string,
 }
 
 func (a *App) Run(ctx context.Context) error {
-	humanOutput := zerolog.NewConsoleWriter(
-		func(w *zerolog.ConsoleWriter) {
-			w.Out = a.w
-			w.TimeFormat = time.RFC3339
-		},
-	)
-
-	logger := zerolog.New(humanOutput).With().
-		Timestamp().
-		Str("version", a.version).
-		Str("commit", a.commit).
-		Logger()
-
-	_ = logger
 
 	app := &cli.App{
 		Name:   "neveralone",
@@ -69,6 +56,11 @@ func (a *App) Run(ctx context.Context) error {
 				Usage:   "Token to sign JWTs",
 				Value:   "super-secret",
 				EnvVars: []string{"SIGNING_TOKEN"},
+			},
+			&cli.BoolFlag{
+				Name:    "development",
+				Usage:   "If in development mode",
+				EnvVars: []string{"NA_DEVELOPMENT"},
 			},
 		},
 		Authors: []any{&mail.Address{Name: "julez-dev", Address: "julez-dev@pm.me"}},
@@ -96,18 +88,46 @@ func (a *App) Run(ctx context.Context) error {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			loggerOutput := a.w
+
+			if c.Bool("development") {
+				loggerOutput = zerolog.NewConsoleWriter(
+					func(w *zerolog.ConsoleWriter) {
+						w.Out = a.w
+						w.TimeFormat = time.RFC3339
+					},
+				)
+			}
+
+			logger := zerolog.New(loggerOutput).With().
+				Timestamp().
+				Str("version", a.version).
+				Str("commit", a.commit).
+				Logger()
+
 			sessionStore := store.NewSession()
 
-			//fsTemplate, err := handler.NewFSExecuter(template.HTMLTemplates, "html/*")
-			//
-			//if err != nil {
-			//	return err
-			//}
+			var tExecuter handler.TemplateExecuter
 
-			debugTemplate := handler.NewDebuggerExecuter("./internal/template/html/*")
-			tmplHandler, err := handler.NewTemplate(debugTemplate, sessionStore)
+			if c.Bool("development") {
+				logger = logger.Level(zerolog.DebugLevel)
+				tExecuter = handler.NewDebuggerExecuter("./internal/template/html/*")
+			} else {
+				logger = logger.Level(zerolog.InfoLevel)
+
+				var err error
+				tExecuter, err = handler.NewFSExecuter(template.HTMLTemplates, "html/*")
+
+				if err != nil {
+					logger.Error().Err(err).Send()
+					return err
+				}
+			}
+
+			tmplHandler, err := handler.NewTemplate(tExecuter, sessionStore)
 
 			if err != nil {
+				logger.Error().Err(err).Send()
 				return err
 			}
 
@@ -122,7 +142,14 @@ func (a *App) Run(ctx context.Context) error {
 				jwt,
 			)
 
-			return api.Launch(c.Context)
+			err = api.Launch(c.Context)
+
+			if err != nil {
+				logger.Error().Err(err).Send()
+				return err
+			}
+
+			return nil
 		},
 	}
 

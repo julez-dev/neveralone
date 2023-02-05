@@ -5,11 +5,10 @@ import (
 	"errors"
 	"github.com/julez-dev/neveralone/internal/static"
 	"github.com/labstack/echo/v4"
-	emiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/ziflex/lecho/v3"
 	"golang.org/x/sync/errgroup"
-	"io"
 	"io/fs"
 	"net/http"
 	"time"
@@ -65,8 +64,6 @@ func (s *Server) Launch(ctx context.Context) error {
 	e.Logger = lecho.From(s.logger)
 	e.HideBanner = true
 
-	//e.Use(middleware.OapiRequestValidator(swagger))
-
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		data := &struct {
 			Message string `json:"message"`
@@ -77,20 +74,18 @@ func (s *Server) Launch(ctx context.Context) error {
 		c.JSON(http.StatusInternalServerError, data)
 	}
 
-	e.Use(emiddleware.LoggerWithConfig(
-		emiddleware.LoggerConfig{
-			Skipper:          nil,
-			Format:           "",
-			CustomTimeFormat: "",
-			CustomTagFunc:    nil,
-			Output:           io.Discard,
-		}))
-	//e.Use(emiddleware.Recover())
-
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Skipper: func(c echo.Context) bool {
+			return c.Request().URL.Path == "/favicon.ico"
+		},
+	}))
+	e.Use(middleware.Recover())
 	e.Use(s.getUserMiddleware)
 
+	e.GET("/favicon.ico", func(c echo.Context) error {
+		return c.Blob(http.StatusOK, "image/x-icon", static.IconFile)
+	})
 	e.GET("/", s.GetHome)
-
 	e.POST("/party", s.CreateParty)
 	e.GET("/party", s.CreatePartyCustom)
 	e.Match([]string{http.MethodGet, http.MethodPost}, "/party/:id", s.GetParty)

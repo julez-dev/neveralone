@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/julez-dev/neveralone/internal/cli"
 	"os"
 	"os/signal"
@@ -11,7 +10,7 @@ import (
 
 func main() {
 	app := cli.New(
-		os.Stderr,
+		os.Stdout,
 		os.Stdin,
 		os.Args,
 		Version,
@@ -23,7 +22,6 @@ func main() {
 	defer cancel()
 
 	if err := app.Run(ctx); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }

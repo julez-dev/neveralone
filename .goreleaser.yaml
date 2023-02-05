@@ -24,6 +24,12 @@ builds:
     flags:
       - -trimpath
 
+dockers:
+    # Templates of the Docker image names.
+    - image_templates:
+      - "ghcr.io/julez-dev/neveralone:latest"
+      - "ghcr.io/julez-dev/neveralone:{{ .Tag }}"
+
 release:
   draft: true
 

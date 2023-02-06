@@ -142,9 +142,7 @@ func (a *App) Run(ctx context.Context) error {
 				jwt,
 			)
 
-			err = api.Launch(c.Context)
-
-			if err != nil {
+			if err := api.Launch(c.Context); err != nil {
 				logger.Error().Err(err).Send()
 				return err
 			}

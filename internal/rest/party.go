@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/julez-dev/neveralone/internal/metric"
 	"github.com/julez-dev/neveralone/internal/party"
 	"github.com/labstack/echo/v4"
 	"io"
@@ -66,6 +67,14 @@ func (s *Server) CreateParty(c echo.Context) error {
 	s.sessionStore.Set(session)
 
 	go func() {
+		if config.Visibility == party.PrivateLobby {
+			metric.RoomCountPrivate.Inc()
+			defer metric.RoomCountPrivate.Dec()
+		} else {
+			metric.RoomCountPublic.Inc()
+			defer metric.RoomCountPublic.Dec()
+		}
+
 		session.Run(s.closeCTX)
 		s.sessionStore.Delete(session.ID.String())
 	}()

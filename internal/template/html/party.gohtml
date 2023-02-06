@@ -175,7 +175,7 @@
             case "load-video":
                 player.loadVideoById(
                     {
-                        'videoId': data.payload.id,
+                        'videoId': getYouTubeID(data.payload.id),
                         'startSeconds': 0,
                     },
                 );
@@ -218,6 +218,7 @@
         socketReady = true;
     }
     ws.onclose = function () {
+        socketReady = false;
         Toastify({
             text: "The connection was closed, consider refreshing the page and closing other open tabs",
             duration: 5000,
@@ -326,7 +327,7 @@
         {{ if .State.VideoID}}
         event.target.loadVideoById(
             {
-                'videoId': '{{  .State.VideoID }}',
+                'videoId': getYouTubeID('{{  .State.VideoID }}'),
                 'startSeconds': {{ .State.Timestamp }},
             },
         )
@@ -407,6 +408,16 @@
     function removeUser(userID) {
         const container = document.querySelector('.user-list');
         Array.from(container.children).find(el => el.getAttribute('data-id') === userID)?.remove()
+    }
+
+    function getYouTubeID(id) {
+        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = id.match(regExp);
+        if (match && match[2].length == 11) {
+            return match[2];
+        } else {
+            return id
+        }
     }
 </script>
 

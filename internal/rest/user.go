@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"github.com/julez-dev/neveralone/internal/metric"
 	"github.com/julez-dev/neveralone/internal/party"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -79,6 +80,8 @@ func generateAndSetNewUser(c echo.Context, jwt jwtGenerator) error {
 	if err != nil {
 		return err
 	}
+
+	metric.NewUsersGenerated.Inc()
 
 	setUserCookie(c, token)
 	ctx := context.WithValue(c.Request().Context(), userKey, user)

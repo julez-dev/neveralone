@@ -3,9 +3,11 @@ package rest
 import (
 	"context"
 	"errors"
+	echoPrometheus "github.com/globocom/echo-prometheus"
 	"github.com/julez-dev/neveralone/internal/static"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/ziflex/lecho/v3"
 	"golang.org/x/sync/errgroup"
@@ -79,7 +81,11 @@ func (s *Server) Launch(ctx context.Context) error {
 			return c.Request().URL.Path == "/favicon.ico"
 		},
 	}))
+
+	e.Use(echoPrometheus.MetricsMiddleware())
+	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 	e.Use(middleware.Recover())
+	e.Use(middleware.BodyLimit("2M"))
 	e.Use(s.getUserMiddleware)
 
 	e.GET("/favicon.ico", func(c echo.Context) error {

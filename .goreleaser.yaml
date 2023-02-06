@@ -25,10 +25,31 @@ builds:
       - -trimpath
 
 dockers:
-    # Templates of the Docker image names.
-    - image_templates:
+  - # ID of the image, needed if you want to filter by it later on (e.g. on custom publishers).
+    id: neveralone
+
+    goos: linux
+    goarch: amd64
+
+    ids:
+      - neveralone
+
+    image_templates:
+      - "ghcr.io/julez-dev/neveralone:{{ .Tag }}"
       - "ghcr.io/julez-dev/neveralone:latest"
-      - "ghcr.io/julez-dev/neveralone:{{ .Tag }}-amd64"
+
+    skip_push: false
+    dockerfile: Dockerfile
+    use: docker
+
+    # Template of the docker build flags.
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
 
 release:
   draft: true
